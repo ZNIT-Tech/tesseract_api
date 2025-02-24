@@ -2,42 +2,45 @@ from fastapi import FastAPI, File, UploadFile
 import pytesseract
 from pdf2image import convert_from_bytes
 import os
-from tempfile import NamedTemporaryFile
-import shutil
+import cv2
+import numpy as np
+from PIL import Image, ImageOps
+from concurrent.futures import ThreadPoolExecutor
 
 app = FastAPI()
 
-# Configuração do Tesseract no Docker
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+
+def preprocess_image(img):
+    """Pré-processa a imagem para melhorar a qualidade do OCR."""
+    open_cv_image = np.array(img)
+    gray = cv2.cvtColor(open_cv_image, cv2.COLOR_RGB2GRAY)
+    _, binary = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return Image.fromarray(binary)
+
+def process_page(img):
+    """Aplica OCR na página pré-processada."""
+    img = preprocess_image(img)
+    return pytesseract.image_to_string(img, lang="por")
 
 @app.post("/extract")
 async def extract_text(file: UploadFile = File(...)):
     try:
-        # Salvar arquivo temporariamente
-        with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
-            shutil.copyfileobj(file.file, temp_pdf)
-            temp_pdf_path = temp_pdf.name
+        # Converter PDF para imagens com DPI reduzido para acelerar
+        images = convert_from_bytes(file.file.read(), dpi=100)
 
-        # Converter PDF em imagens
-        images = convert_from_bytes(open(temp_pdf_path, "rb").read())
+        # Processar OCR em paralelo
+        with ThreadPoolExecutor() as executor:
+            texts = list(executor.map(process_page, images))
 
-        # Inicializar variável para armazenar o texto extraído
-        full_text = ""
+        # Concatenar todas as páginas
+        extracted_text = "\n".join([f"\n--- Página {i+1} ---\n{text}" for i, text in enumerate(texts)])
 
-        # Aplicar OCR em cada página
-        for img in images:
-            text = pytesseract.image_to_string(img, lang="por")  
-            full_text += text + "\n"
-
-        # Remover o arquivo temporário
-        os.remove(temp_pdf_path)
-
-        # Retornar o texto extraído como JSON
-        return {"text": full_text.strip()}
+        return {"text": extracted_text.strip()}
 
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"Erro ao processar o PDF: {str(e)}"}
 
-@app.get('/enzo')
+@app.get('/lifecheck')
 async def read_root():
-    return {"message": "Hello Enzo!"}
+    return {"message": "Hello!"}

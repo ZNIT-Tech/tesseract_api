@@ -4,6 +4,7 @@ FROM python:3.10
 # Instala pacotes necessários
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
+    libgl1-mesa-glx \
     libtesseract-dev \
     tesseract-ocr-por \
     poppler-utils && \
