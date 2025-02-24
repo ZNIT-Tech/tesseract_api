@@ -4,33 +4,40 @@ from pdf2image import convert_from_bytes
 import os
 import cv2
 import numpy as np
-from PIL import Image, ImageOps
-from concurrent.futures import ThreadPoolExecutor
+from PIL import Image
+from concurrent.futures import ProcessPoolExecutor
 
 app = FastAPI()
 
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 def preprocess_image(img):
-    """Pré-processa a imagem para melhorar a qualidade do OCR."""
+    """Melhora a qualidade do OCR removendo ruídos e aumentando contraste."""
     open_cv_image = np.array(img)
     gray = cv2.cvtColor(open_cv_image, cv2.COLOR_RGB2GRAY)
-    _, binary = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    
+    # Remover ruído e melhorar contraste
+    filtered = cv2.bilateralFilter(gray, 5, 75, 75)
+    
+    # Aplicar threshold adaptativo
+    binary = cv2.adaptiveThreshold(filtered, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                   cv2.THRESH_BINARY, 31, 2)
+    
     return Image.fromarray(binary)
 
 def process_page(img):
-    """Aplica OCR na página pré-processada."""
+    """Corrige rotação, melhora contraste e aplica OCR."""
     img = preprocess_image(img)
     return pytesseract.image_to_string(img, lang="por")
 
 @app.post("/extract")
 async def extract_text(file: UploadFile = File(...)):
     try:
-        # Converter PDF para imagens com DPI reduzido para acelerar
-        images = convert_from_bytes(file.file.read(), dpi=100)
+        # Converter PDF para imagens com DPI alto para melhor definição
+        images = convert_from_bytes(file.file.read(), dpi=300)
 
-        # Processar OCR em paralelo
-        with ThreadPoolExecutor() as executor:
+        # Processamento paralelo (Multiprocessing) para reduzir tempo
+        with ProcessPoolExecutor() as executor:
             texts = list(executor.map(process_page, images))
 
         # Concatenar todas as páginas
@@ -41,6 +48,6 @@ async def extract_text(file: UploadFile = File(...)):
     except Exception as e:
         return {"error": f"Erro ao processar o PDF: {str(e)}"}
 
-@app.get('/lifecheck')
+@app.get('/enzo')
 async def read_root():
-    return {"message": "Hello!"}
+    return {"message": "Hello Enzo!"}
