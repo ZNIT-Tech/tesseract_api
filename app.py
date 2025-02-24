@@ -37,3 +37,7 @@ async def extract_text(file: UploadFile = File(...)):
 
     except Exception as e:
         return {"error": str(e)}
+
+@app.get('/enzo')
+async def read_root():
+    return {"message": "Hello Enzo!"}
