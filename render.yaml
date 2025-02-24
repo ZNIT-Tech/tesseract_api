@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: ocr-api
+    env: docker
+    repo: https://github.com/enzorooschqueiroz/tesseract_api.git
+    region: oregon
+    plan: free
+    envVars:
+      - key: PORT
+         # Ou remova essa linha para usar a porta automática do Render

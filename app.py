@@ -48,6 +48,10 @@ async def extract_text(file: UploadFile = File(...)):
     except Exception as e:
         return {"error": f"Erro ao processar o PDF: {str(e)}"}
 
-@app.get('/enzo')
+@app.get('/check')
 async def read_root():
-    return {"message": "Hello Enzo!"}
+    return {"message": "Live Check"}
+
+@app.get("/")
+async def home():
+    return {"message": "OCR API is running!"}
