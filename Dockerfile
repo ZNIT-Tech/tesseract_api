@@ -23,5 +23,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8000
 
 # Comando para rodar a API
-CMD exec uvicorn app:app --host 0.0.0.0 --port ${PORT:-443}
+CMD exec uvicorn app:app --host 0.0.0.0 --port ${PORT:-80}
 
