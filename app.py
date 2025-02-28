@@ -12,6 +12,23 @@ pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 @app.post("/extract")
 async def extract_text(file: UploadFile = File(...)):
+    """
+    Extract text from an uploaded PDF file using OCR.
+    Endpoint: /extract
+    Method: POST
+    Args:
+        file (UploadFile): The uploaded PDF file to be processed.
+    Returns:
+        dict: A dictionary containing the extracted text or an error message.
+    Raises:
+        Exception: If an error occurs during the file processing or OCR extraction.
+    Process:
+    1. Save the uploaded PDF file temporarily.
+    2. Convert the PDF into images.
+    3. Apply OCR to each image to extract text.
+    4. Remove the temporary PDF file.
+    5. Return the extracted text as a JSON response.
+    """
     try:
         # Salvar arquivo temporariamente
         with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
@@ -38,9 +55,9 @@ async def extract_text(file: UploadFile = File(...)):
     except Exception as e:
         return {"error": str(e)}
 
-@app.get('/check')
+@app.get('/health')
 async def read_root():
-    return {"message": "Live Check"}
+    return {"message": "Healthy"}
 
 @app.get("/")
 async def home():
